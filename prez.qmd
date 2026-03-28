@@ -1,0 +1,711 @@
+---
+title: "Solving Sharp-Interface Phase-Change Problems:<br> Newton Is All You Need!"
+subtitle: "TCM Team Meeting, April 2026"
+date: today
+author: Louis Libat*, Can Selçuk, Eric Chénier, Vincent Le Chenadec
+institute: "Multiscale Modeling and Simulation Laboratory (MSME), CNRS UMR 8208, Gustave Eiffel University, France"
+date-format: 'YYYY-MM-DD'
+format: 
+  revealjs:
+    theme: [default, theme.scss]
+    css: theme.css
+    html-math-method: mathml
+    margin-left: '3rem'
+history: false
+navigation-mode: linear
+controls: false
+slide-number: true
+progress: false
+menu: false
+smaller: true
+scrollable: false
+margin: 0.1
+revealOptions:
+  width: 1280
+  height: 720
+disable-layout: false
+transition: none
+transition-speed: default
+fig-format: svg
+embed-resources: true
+---
+
+# Motivation
+
+## Sharp-interface multiphysics is a coupling problem
+
+- Phase change, heat transfer, mass transfer, free boundaries
+- Discontinuous coefficients and jump conditions across a moving interface
+- Geometry and PDE are strongly coupled
+
+**Sharp-interface phase-change problems are not only difficult because of physics. They are also difficult because of coupling.**
+
+:::{.columns}
+::: {.column width="50%"}
+![Crystal growth - [Xiangang Tao, USTC, 2014](beautifulchemistry.net)](figures/crystal.gif)
+:::
+::: {.column width="50%"}
+![Bubble formation - [Xiangang Tao, USTC, 2014](beautifulchemistry.net)](figures/bubble.gif)
+:::
+:::
+
+
+## Two-phase sharp-interface model
+
+Let $\Omega=\Omega^-(t)\cup\Gamma(t)\cup\Omega^+(t)$, where $\mathbf n$ points from $\Omega^-$ to $\Omega^+$.
+
+In each phase $\Omega^\pm(t)$:
+
+:::{.columns}
+::: {.column width="50%"}
+
+**Heat**
+$$
+\rho^\pm c_p^\pm
+\left(\partial_t T^\pm + \mathbf u^\pm\!\cdot\!\nabla T^\pm\right)
+=
+\nabla\!\cdot\!\left(k^\pm \nabla T^\pm\right)
+$$
+
+**Species**
+$$
+\partial_t C^\pm + \mathbf u^\pm\!\cdot\!\nabla C^\pm
+=
+\nabla\!\cdot\!\left(D^\pm \nabla C^\pm\right)
+$$
+:::
+::: {.column width="50%"}
+**Flow**
+$$
+\rho^\pm \partial_t \mathbf u^\pm
+=
+\nabla\!\cdot\!\boldsymbol\sigma^\pm + \rho^\pm \mathbf g,
+\qquad
+\nabla\!\cdot\!\mathbf u^\pm = 0
+$$
+with
+$$
+\boldsymbol\sigma^\pm
+=
+-p^\pm \mathbf I
++
+\mu^\pm\left(\nabla \mathbf u^\pm + \nabla \mathbf u^{\pm T}\right)
+$$
+:::
+:::
+
+> **Two phases in the bulk. One sharp interface for the coupling.**
+
+## Interface conditions and phase change
+
+On the moving interface $\Gamma(t)$:
+
+**Mass balance / kinematic condition**
+$$
+\dot m = \rho^- \left(\mathbf u^- - \mathbf v\right)\!\cdot\!\mathbf n
+= \rho^+ \left(\mathbf u^+ - \mathbf v\right)\!\cdot\!\mathbf n
+$$
+
+**Energy balance**
+$$
+\dot m L = \llbracket k \nabla T \cdot \mathbf n \rrbracket
+$$
+
+**Species balance**
+$$
+\dot m \llbracket C \rrbracket = \llbracket D \nabla C \cdot \mathbf n \rrbracket
+$$
+
+**Momentum balance**
+$$
+\llbracket \boldsymbol\sigma \cdot \mathbf n \rrbracket = \gamma \kappa \mathbf n,
+\qquad
+\llbracket \mathbf u \rrbracket = \mathbf 0
+$$
+
+**Closure**
+$$
+\llbracket T \rrbracket = 0,
+\qquad
+T_\Gamma = T_m + m C^- + \epsilon_\kappa \kappa + \epsilon_v \mathbf v\cdot\mathbf n,
+\qquad
+C^+ = k_e C^-
+$$
+
+> **The PDE determines the interfacial fluxes.**  
+> **The fluxes determine the interface motion.**
+
+## What is the usual difficulty?
+
+:::{.columns}
+:::{.column width="50%"}
+**Classical approaches**
+
+- smear the interface
+- regularize jumps
+- decouple PDE and interface motion
+- use weak or explicit coupling
+:::
+:::{.column width="50%"}
+**What we want instead**
+
+- keep the interface **sharp**
+- enforce jump conditions **directly**
+- preserve local conservation
+- solve the coupled problem **as a nonlinear system**
+:::
+:::
+
+> **We do not approximate the coupling.**  
+> **We solve it.**
+
+# Part I --- Fixed interface: sharp-interface model
+
+## Start with the interface known
+
+- Fixed embedded interface $\Gamma$
+- Two phases $\Omega^-$ and $\Omega^+$
+- Diffusion / heat / mass transfer with jump conditions
+
+$$
+-\nabla \cdot \left( \beta^\pm \nabla u^\pm \right) = f^\pm
+\qquad \text{in } \Omega^\pm
+$$
+
+$$
+\llbracket \alpha u \rrbracket + \gamma \nabla u^\pm \cdot \bm n = g_j,
+\qquad
+\llbracket \beta \nabla u \cdot \bm n \rrbracket = g_f
+\qquad \text{on } \Gamma
+$$
+
+> **Before moving interfaces, the first requirement is already clear:**  
+> **respect the geometry and respect the jumps.**
+
+## Numerical idea: cut cells + interface unknowns
+
+- Cartesian finite-volume discretization
+- The interface cuts cells and faces
+- Geometric moments encode the cut geometry
+- Bulk unknowns and interface unknowns are solved together
+
+$$
+\text{bulk equations in } \Omega^\pm
+\quad + \quad
+\text{interface constraints on } \Gamma
+\quad \Longrightarrow \quad
+\text{one monolithic sparse solve}
+$$
+
+> **The interface is not a boundary artifact.**  
+> **It is part of the discrete model.**
+
+## Geometric moments are enough
+
+:::{.columns}
+::: {.column width="55%"}
+The cut-cell operators are built from low-order moments only:
+$$
+V_i^\pm,
+\qquad
+A_f^\pm,
+\qquad
+\Gamma_i,
+\qquad
+\mathbf x_i^\pm,
+\qquad
+\mathbf x_i^\Gamma
+$$
+
+- $V_i^\pm$: phase volumes
+- $A_f^\pm$: open face apertures
+- $\Gamma_i$: interface measure in the cell
+- $\mathbf x_i^\pm,\mathbf x_i^\Gamma$: barycenters
+
+> **Geometry first. Operators next. Assembly after that.**
+:::
+::: {.column width="45%"}
+![Cut-cell geometry](figures/cutcell_moments.png)
+:::
+:::
+
+## One coupled linear system
+
+Jump conditions become additional algebraic equations for the interface unknowns.
+
+$$
+\underbrace{
+\begin{bmatrix}
+\text{bulk }- & \text{coupling} & 0 & 0 \\
+\text{flux jump} & \text{coupling} & \text{coupling} & 0 \\
+0 & \text{coupling} & \text{coupling} & \text{scalar jump} \\
+0 & 0 & \text{coupling} & \text{bulk }+
+\end{bmatrix}}_{\text{one sharp-interface system}}
+\begin{bmatrix}
+u^{\omega-} \\
+u^{\gamma-} \\
+u^{\gamma+} \\
+u^{\omega+}
+\end{bmatrix}
+=
+\begin{bmatrix}
+b^- \\
+g_f \\
+g_j \\
+b^+
+\end{bmatrix}
+$$
+
+- no ghost-fluid smearing
+- no diffuse effective coefficients
+- jump laws enforced on the interface unknowns themselves
+
+> **A sharp interface deserves a sharp algebraic system.**
+
+## Result: mass transfer across a static bubble (2D) 
+
+:::{.columns}
+::: {.column width="52%"}
+Bulk diffusion in each phase:
+$$
+\partial_t C^\pm=\nabla\!\cdot(D^\pm\nabla C^\pm)
+$$
+
+Sharp interfacial coupling:
+$$
+\llbracket C \rrbracket=(H-1)C^-,
+\qquad
+\llbracket D\nabla C\cdot\mathbf n \rrbracket=0
+$$
+
+- arbitrary jump ratio $H$
+- flux continuity enforced sharply
+- no smearing through the interface
+- clear gain over one-fluid formulations
+
+> **The gain is not cosmetic.  
+> It grows with refinement.**
+:::
+
+::: {.column width="48%"}
+![](img/diphasic_diffusion_multiple_λ.png){width="100%"}
+
+\vspace{0.4em}
+
+\small
+Gain over one-fluid:
+$\times 2.4,\ \times 7.2,\ \times 16.8,\ \dots,\ \times 1707$
+:::
+:::
+
+## Reminder: prescribed moving interface with Robin transfer
+
+:::{.columns}
+::: {.column width="52%"}
+Diffusion in a domain with a **prescribed moving interface** $\Gamma(t)$:
+$$
+\partial_t \phi^\pm
+=
+\nabla\!\cdot(D^\pm \nabla \phi^\pm)
+\qquad \text{in } \Omega^\pm(t)
+$$
+
+Mixed transfer law on $\Gamma(t)$:
+$$
+\alpha \phi + \beta\, D\nabla\phi\!\cdot\!\mathbf n = g
+$$
+
+Interpretation:
+- heat exchange on a moving boundary
+- wall transfer with finite resistance
+- **heterogeneous surface reaction on moving interfaces**
+
+Numerically:
+- space-time cut cells
+- swept volumes / apertures handled sharply
+- fresh/dead cells handled automatically
+- Robin law enforced directly on the moving interface
+
+> **The geometry moves.  
+> The interface law stays sharp.**
+:::
+
+::: {.column width="48%"}
+<!-- Suggested figure here:
+top: img/space_time.png
+bottom: img/interface_boundary_3axes.png
+or any prescribed-motion field snapshot from the old paper
+-->
+
+![](img/space_time.png){width="92%"}
+
+![](img/interface_boundary_3axes.png){width="92%"}
+
+\small
+Prescribed motion isolates the moving-geometry difficulty before free-boundary coupling.
+:::
+:::
+
+
+## What fixed-interface results already show
+
+> L. Libat, C. Selçuk, E. Chénier, V. Le Chenadec, "A Space-Time Cartesian Cut-Cell Method for Two-Phase Diffusion Problems using a Two-Fluid Approach", Journal of Computational Physics (In review), 2026.
+
+- Sharp jumps are captured without smearing
+- Flux continuity is enforced at the interface
+- Good accuracy on difficult cut-cell configurations
+- The same framework already works for prescribed moving interfaces in space-time
+
+
+> **The static and prescribed-motion story is already strong.**  
+> **Now the real difficulty starts: free boundaries.**
+
+
+# Part II --- Phase change and nonlinear coupling
+
+## Phase change turns the interface into an unknown
+
+For a Stefan-type problem,
+$$
+V_n \propto \llbracket q \rrbracket,
+\qquad
+q = -\beta \nabla u \cdot \bm n
+$$
+
+So the logic becomes
+
+$$
+\text{PDE solution}
+\;\Longleftrightarrow\;
+\text{interfacial flux}
+\;\Longleftrightarrow\;
+\text{interface motion}
+$$
+
+- solve PDE $\Rightarrow$ get flux
+- get flux $\Rightarrow$ move interface
+- move interface $\Rightarrow$ change geometry
+- change geometry $\Rightarrow$ new PDE
+
+> **The interface is not a boundary condition.**  
+> **It is an unknown.**
+
+## Moving interfaces require space-time geometry
+
+When $\Gamma(t)$ moves, cells can appear or disappear.
+
+:::{.columns}
+:::{.column width="54%"}
+**What space-time finite volumes fix**
+
+- fresh / dead cells become ordinary space-time cut cells
+- geometry and conservation are handled on the same slab
+- no ad hoc merging or repair step
+
+A local geometric conservation law is built in:
+$$
+V_{n+1,i}^\pm - V_{n,i}^\pm
+\mp
+\int_{t_n}^{t_{n+1}}\!\int_{\Gamma_i(t)} w\,dS\,dt = 0
+$$
+:::
+:::{.column width="46%"}
+![Space-time cut cells](figures/space_time.png)
+:::
+:::
+
+> **Fresh cells and dead cells are not special cases.**  
+> **They are just space-time cut cells.**
+
+## The coupled nonlinear problem
+
+Let $X_{n+1}$ denote the front degrees of freedom at the end of the time step.
+Then
+
+$$
+X_{n+1}
+\;\longrightarrow\;
+\Gamma_h^{n+1}(X_{n+1})
+\;\longrightarrow\;
+\mathcal M_{n+\frac12}(X_{n+1})
+$$
+
+The bulk equations and the Stefan balance define
+
+$$
+\mathbf F_H^{+}(\mathbf T_{n+1}^{+},X_{n+1})=\mathbf 0,
+\qquad
+\mathbf F_H^{-}(\mathbf T_{n+1}^{-},X_{n+1})=\mathbf 0,
+$$
+$$
+\mathbf F_S(\mathbf T_{n+1}^{+},\mathbf T_{n+1}^{-},X_{n+1})=\mathbf 0
+$$
+
+With
+$$
+U=
+\begin{bmatrix}
+\mathbf T_{n+1}^{+} \\
+\mathbf T_{n+1}^{-} \\
+X_{n+1}
+\end{bmatrix},
+\qquad
+\mathbf F(U)=\mathbf 0
+$$
+
+> **The unknown is not only the field.**  
+> **The unknown is field + geometry.**
+
+## Why splitting is not enough
+
+:::{.columns}
+:::{.column width="48%"}
+**Classical split logic**
+
+$$
+X_n
+\;\to\;
+\widetilde X_{n+1}
+\;\to\;
+\mathcal M(\widetilde X_{n+1})
+\;\to\;
+\widetilde T_{n+1}^\pm
+\;\to\;
+X_{n+1}^{\mathrm{split}}
+$$
+
+- solve on one geometry
+- accept another geometry
+- never enforce Stefan again on the final slab
+:::
+:::{.column width="52%"}
+**What goes wrong**
+
+$$
+R_{i,j}(X_{n+1}^{\mathrm{split}},
+\widetilde T_{n+1}^{+},
+\widetilde T_{n+1}^{-}) \neq 0
+$$
+
+- end-of-step Stefan residual remains nonzero
+- interface error may dominate the bulk discretization error
+- the stronger the gradients, the worse the mismatch
+:::
+:::
+
+> **If the coupling is the problem, decoupling is not the solution.**
+
+## Nonlinear correction loop: the basic idea
+
+At iteration $k$:
+
+1. assume a candidate interface $\Gamma^{(k)}$
+2. rebuild cut-cell and space-time geometry
+3. solve the bulk PDE on that geometry
+4. evaluate the discrete Stefan residual
+5. correct the interface
+6. repeat until the residual is small
+
+$$
+\Gamma^{(k+1)} = \Gamma^{(k)} + \delta \Gamma^{(k)}
+$$
+
+> **This is not “move first, solve later”.**  
+> **This is a nonlinear correction loop.**
+
+## Two correction strategies, same residual
+
+:::{.columns}
+:::{.column width="50%"}
+**Levenberg--Marquardt correction**
+
+Solve for a front displacement $d$ by minimizing
+$$
+\frac12\|r(d)\|_W^2
++
+\frac{\eta}{2}\|L_\Gamma d\|^2
+$$
+
+- global correction
+- smooth and robust
+- closest in spirit to a reduced Newton step
+:::
+:::{.column width="50%"}
+**Residual redistribution**
+
+- convert each cellwise Stefan defect into a local displacement demand
+- redistribute that demand to nearby front markers
+- smooth intrinsically on the front
+
+Same residual. Different correction mechanism.
+:::
+:::
+
+> **Different front updates. Same coupled problem.**
+
+## Why Newton?
+
+- The difficulty is the nonlinear PDE--geometry coupling
+- Newton gives the right viewpoint: solve the coupled residual, not the subproblems separately
+- A full Jacobian is expensive because geometry reconstruction is inside the residual
+- So we use reduced nonlinear corrections with the same philosophy
+
+$$
+\mathbf J(U^{(k)})\,\delta U^{(k)} = -\mathbf F(U^{(k)})
+$$
+
+> **Sharp-interface phase change is a nonlinear problem.**  
+> **So we use nonlinear thinking.**
+
+::: center
+**Newton is all you need.**
+:::
+
+# Results
+
+## Planar Stefan front: the coupled correction works
+
+- self-similar two-phase benchmark
+- interface and temperature both converge cleanly
+- fewer than $10$ inner iterations are usually enough
+- residual is driven essentially to machine precision
+
+**Observed global rates**
+
+- LM correction: $\approx 2.31$ in temperature, $\approx 2.02$ in interface position
+- residual redistribution: $\approx 2.13$ in temperature, $\approx 2.08$ in interface position
+
+<!-- Suggested figure here: planar Stefan convergence + residual decay -->
+
+> **Once the coupling is enforced, second-order front accuracy comes back.**
+
+## Frank disk: coupled beats predictor-only
+
+The exact interface is radially symmetric:
+$$
+r_s(t)=2\lambda\sqrt{\alpha^+ t}
+$$
+
+**Coupled strategies**
+
+- LM: global rates $\approx 2.14$ in temperature, $\approx 1.89$ in radius
+- redistribution: global rates $\approx 2.24$ in temperature, $\approx 1.58$ in radius
+
+**Predictor-only baseline**
+
+- temperature still converges reasonably well
+- radius error becomes non-monotone
+- no meaningful global convergence for the interface
+
+> **The bulk discretization is not the main issue anymore.**  
+> **The main issue is the coupling error.**
+
+<!-- Suggested figure here: Frank disk radius / field / comparison between coupled and predictor-only -->
+
+## Beyond the smooth benchmark
+
+- 3D Frank sphere
+- stronger front deformations
+- dendritic decay / instability-type configurations
+- extension to temperature + species + flow
+
+> **Once the interface is treated as an unknown, the framework becomes naturally multiphysics-ready.**
+
+<!-- Suggested figure here: 3D sphere / dendrite / thermo-solutal teaser -->
+
+## Code perspective
+
+- geometry, operators, assembly, solve: clearly separated
+- same operator logic in static and moving cases
+- same sharp-interface philosophy for diffusion, transport, Stokes, Stefan
+- front tracking and other interface representations can share the same cut-cell core
+
+> **The code reflects the mathematics:**  
+> **geometry and PDE are solved together, not separately.**
+
+# Take-home messages
+
+## What to remember
+
+1. Fixed-interface sharp discretization already beats smeared approaches
+2. For phase change, the real difficulty is the PDE--geometry coupling
+3. The interface must be treated as an unknown
+4. Space-time cut cells give the right moving-geometry framework
+5. Nonlinear correction is the natural way to solve the full problem
+
+> **The interface is not a boundary condition.**  
+> **It is an unknown.**
+
+::: center
+**In Newton we trust.**
+:::
+
+## Thank you {.center}
+
+::: center
+**Questions?**
+:::
+
+# Appendix {.appendix visibility="uncounted"}
+
+## Appendix --- Geometric moments in one line
+
+For a given interface representation $f$, the geometry module returns the low-order moments needed by the operators:
+
+$$
+(V,\,\mathbf x,\,\Gamma,\,\mathrm{ctype},\,\mathbf x_\Gamma)
+= \texttt{integrate(Tuple\{0\}, f, g, Float64, nan)}
+$$
+$$
+A = \texttt{integrate(Tuple\{1\}, f, g, Float64, nan)}
+$$
+$$
+W = \texttt{integrate(Tuple\{0\}, f, g, Float64, nan,  x)}
+$$
+
+- $V$: wet volume
+- $A$: face apertures
+- $\Gamma$: interface measure
+- $\mathbf x$, $\mathbf x_\Gamma$: barycenters
+- $W$: staggered / shifted moments
+
+> **Geometry in. Operators out.**
+
+## Appendix --- Operator construction, matrix-free point of view
+
+For each active cell / face / interface patch:
+
+```julia
+for cell in active_cells(grid, geometry)
+    V⁻, V⁺      = phase_volumes(cell)
+    A⁻, A⁺      = open_face_areas(cell)
+    Γ, xΓ       = interface_measure(cell)
+
+    # bulk divergence contributions
+    add_bulk_fluxes!(residual⁻, cell, A⁻, uω⁻, uγ⁻)
+    add_bulk_fluxes!(residual⁺, cell, A⁺, uω⁺, uγ⁺)
+
+    # interface constraints
+    add_jump_rows!(residualγ, cell, Γ, xΓ, uγ⁻, uγ⁺)
+end
+```
+
+- local geometry drives local fluxes
+- the interface enters through the same cellwise loop
+- matrix-free and assembled views share the same geometric ingredients
+
+## Appendix --- Nonlinear free-boundary loop
+
+```julia
+Γk = predictor(Γn)
+for k in 1:maxiter
+    moments = spacetime_moments(Γn, Γk)
+    T⁻, T⁺  = solve_bulk_diffusion(moments)
+    r       = stefan_residual(T⁻, T⁺, Γk, moments)
+    converged(r) && break
+    Γk      = correct_front(Γk, r)   # LM or redistribution
+end
+accept!(Γk)
+```
+
+> **Same geometry for the PDE solve and for the Stefan residual.**
