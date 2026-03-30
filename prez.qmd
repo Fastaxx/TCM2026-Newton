@@ -28,6 +28,8 @@ transition: none
 transition-speed: default
 fig-format: svg
 embed-resources: true
+bibliography: references.bib
+csl: chicago-fullnote-bibliography.csl
 ---
 
 # Motivation
@@ -50,7 +52,7 @@ embed-resources: true
 :::
 
 
-## Two-phase sharp-interface model
+## Two-phase sharp-interface model [^1]
 
 Let $\Omega=\Omega^-(t)\cup\Gamma(t)\cup\Omega^+(t)$, where $\mathbf n$ points from $\Omega^-$ to $\Omega^+$.
 
@@ -96,11 +98,12 @@ $$
 
 > **Two phases in the bulk. One sharp interface for the coupling.**
 
-## Interface conditions and phase change
+
+[^1]: [@Bothe_2022]
+
+## Interface conditions and phase change [^2]
 
 On the moving interface $\Gamma(t)$:
-
-**Mass balance / kinematic condition**
 $$
 \dot m = \rho^- \left(\mathbf u^- - \mathbf v\right)\!\cdot\!\mathbf n
 = \rho^+ \left(\mathbf u^+ - \mathbf v\right)\!\cdot\!\mathbf n
@@ -132,8 +135,9 @@ T_\Gamma = T_m + m C^- + \epsilon_\kappa \kappa + \epsilon_v \mathbf v\cdot\math
 C^+ = k_e C^-
 $$
 
-> **The PDE determines the interfacial fluxes.**  
-> **The fluxes determine the interface motion.**
+> **The PDE determines the interfacial fluxes which determine the motion.**
+
+[^2]: [@AZIZ19882335]
 
 ## What is the usual difficulty?
 
@@ -262,7 +266,7 @@ $$
 
 > **A sharp interface deserves a sharp algebraic system.**
 
-## Result: mass transfer across a static bubble (2D) 
+## Result: mass transfer across a static bubble (2D)
 
 :::{.columns}
 ::: {.column width="52%"}
@@ -280,69 +284,70 @@ $$
 
 - arbitrary jump ratio $H$
 - flux continuity enforced sharply
-- no smearing through the interface
 - clear gain over one-fluid formulations
 
-> **The gain is not cosmetic.  
-> It grows with refinement.**
+> **The gain is not cosmetic.**  
+> **It grows with refinement.**
 :::
 
 ::: {.column width="48%"}
-![](img/diphasic_diffusion_multiple_λ.png){width="100%"}
+![](figures/henry_field_u1_u2_H30.gif){width="100%"}
 
-\vspace{0.4em}
+<div style="font-size:0.58em; margin-top:0.4em;">
 
-\small
-Gain over one-fluid:
-$\times 2.4,\ \times 7.2,\ \times 16.8,\ \dots,\ \times 1707$
+| $N_{\text{diam}}$ | Our method | One-fluid | Gain |
+|---:|---:|---:|---:|
+| 8   | $3.24\times 10^{-4}$ | $5.45\times 10^{-3}$ | $\times 16.8$ |
+| 16  | $5.25\times 10^{-5}$ | $2.75\times 10^{-3}$ | $\times 52.5$ |
+| 32  | $6.46\times 10^{-6}$ | $1.42\times 10^{-3}$ | $\times 220$ |
+| 128 | $1.94\times 10^{-7}$ | $3.32\times 10^{-4}$ | $\times 1707$ |
+
+</div>
+
+<div style="font-size:0.58em; margin-top:-0.3em;">
+Observed order: our method $\approx 2.2$ \quad vs \quad one-fluid $\approx 1.1$
+</div>
 :::
 :::
 
-## Reminder: prescribed moving interface with Robin transfer
+## Result: prescribed moving interface with Robin transfer
 
 :::{.columns}
 ::: {.column width="52%"}
-Diffusion in a domain with a **prescribed moving interface** $\Gamma(t)$:
-$$
-\partial_t \phi^\pm
-=
-\nabla\!\cdot(D^\pm \nabla \phi^\pm)
-\qquad \text{in } \Omega^\pm(t)
-$$
-
-Mixed transfer law on $\Gamma(t)$:
+Prescribed moving interface $\Gamma(t)$, with Robin transfer law:
 $$
 \alpha \phi + \beta\, D\nabla\phi\!\cdot\!\mathbf n = g
+\qquad \text{on }\Gamma(t)
 $$
 
-Interpretation:
-- heat exchange on a moving boundary
-- wall transfer with finite resistance
-- **heterogeneous surface reaction on moving interfaces**
+What this shows:
 
-Numerically:
-- space-time cut cells
-- swept volumes / apertures handled sharply
-- fresh/dead cells handled automatically
-- Robin law enforced directly on the moving interface
+- moving geometry handled in **space-time**
+- fresh/dead cells treated naturally
+- Robin transfer remains **sharp**
+- relevant for **heterogeneous surface reaction**
 
-> **The geometry moves.  
-> The interface law stays sharp.**
+> **The geometry moves.**  
+> **The interface law stays sharp.**
 :::
 
 ::: {.column width="48%"}
-<!-- Suggested figure here:
-top: img/space_time.png
-bottom: img/interface_boundary_3axes.png
-or any prescribed-motion field snapshot from the old paper
--->
+![](figures/moving_heat_robin_animation.gif){width="100%"}
 
-![](img/space_time.png){width="92%"}
+<div style="font-size:0.56em; margin-top:0.45em;">
 
-![](img/interface_boundary_3axes.png){width="92%"}
+| $h$ | All cells | Full cells | Cut cells |
+|---:|---:|---:|---:|
+| 0.25    | $2.49\times 10^{-1}$ | $9.54\times 10^{-2}$ | $2.30\times 10^{-1}$ |
+| 0.125   | $4.27\times 10^{-2}$ | $3.80\times 10^{-2}$ | $1.96\times 10^{-2}$ |
+| 0.0625  | $1.42\times 10^{-2}$ | $1.33\times 10^{-2}$ | $4.96\times 10^{-3}$ |
+| 0.03125 | $5.37\times 10^{-3}$ | $5.32\times 10^{-3}$ | $7.58\times 10^{-4}$ |
 
-\small
-Prescribed motion isolates the moving-geometry difficulty before free-boundary coupling.
+</div>
+
+<div style="font-size:0.56em; margin-top:-0.3em;">
+Observed order: all $=1.79$ \quad full $=1.72$ \quad cut $=2.1$
+</div>
 :::
 :::
 
@@ -351,9 +356,8 @@ Prescribed motion isolates the moving-geometry difficulty before free-boundary c
 
 > L. Libat, C. Selçuk, E. Chénier, V. Le Chenadec, "A Space-Time Cartesian Cut-Cell Method for Two-Phase Diffusion Problems using a Two-Fluid Approach", Journal of Computational Physics (In review), 2026.
 
-- Sharp jumps are captured without smearing
-- Flux continuity is enforced at the interface
-- Good accuracy on difficult cut-cell configurations
+- Vast range of sharp jumps types and discontinuities can be handled (Robin, Nonlinear, Extreme jump ratios, etc.)
+- Excellent accuracy on difficult cut-cell configurations
 - The same framework already works for prescribed moving interfaces in space-time
 
 
@@ -459,16 +463,14 @@ $$
 ## Why splitting is not enough
 
 :::{.columns}
-:::{.column width="48%"}
+:::{.column width="48%" .fragment}
 **Classical split logic**
 
 $$
 X_n
 \;\to\;
 \widetilde X_{n+1}
-\;\to\;
-\mathcal M(\widetilde X_{n+1})
-\;\to\;
+\;\overset{\mathcal M(\widetilde X_{n+1})}{\to}\;
 \widetilde T_{n+1}^\pm
 \;\to\;
 X_{n+1}^{\mathrm{split}}
@@ -478,7 +480,7 @@ $$
 - accept another geometry
 - never enforce Stefan again on the final slab
 :::
-:::{.column width="52%"}
+:::{.column width="52%" .fragment}
 **What goes wrong**
 
 $$
@@ -493,7 +495,9 @@ $$
 :::
 :::
 
+:::{.fragment}
 > **If the coupling is the problem, decoupling is not the solution.**
+:::
 
 ## Nonlinear correction loop: the basic idea
 
@@ -517,13 +521,18 @@ $$
 
 :::{.columns}
 :::{.column width="50%"}
-**Levenberg--Marquardt correction**
+**Gauss--Newton correction**
 
 Solve for a front displacement $d$ by minimizing
 $$
+J(d) =
 \frac12\|r(d)\|_W^2
 +
 \frac{\eta}{2}\|L_\Gamma d\|^2
+$$
+
+$$
+d^* = \arg\min_d J(d)
 $$
 
 - global correction
@@ -533,30 +542,117 @@ $$
 :::{.column width="50%"}
 **Residual redistribution**
 
-- convert each cellwise Stefan defect into a local displacement demand
-- redistribute that demand to nearby front markers
-- smooth intrinsically on the front
+Convert the local Stefan residual into a front displacement 
 
-Same residual. Different correction mechanism.
+$$
+\delta d^{(k)} = -\lambda^{(k)}\;S_\Gamma\;A_{v\leftarrow\sigma}^{(k)}\;C_{\sigma\leftarrow c}^{(k)}\;D_c^{(k)\,-1}\;r^{(k)}.
+$$
+
+$$
+\Gamma^{(k+1)} = \Gamma^{(k)} + \delta d^{(k)}
+$$
+
+
+- local correction
+- more aggressive than Gauss--Newton
 :::
 :::
 
-> **Different front updates. Same coupled problem.**
+> **Same residual. Different front updates. Same coupled problem.**
+
+## Two correction strategies, same residual
+
+:::{.columns}
+::: {.column width="50%" .fragment}
+**Gauss--Newton correction**
+![](figures/fig1.png){width="100%"}
+:::
+::: {.column width="50%" .fragment}
+**Residual redistribution**
+![](figures/fig2.png){width="100%"}
+:::
+:::
+
+## A reduced Jacobian: differentiate geometry, not flux
+
+For the Stefan residual in each cut cell,
+$$
+r_i(X_{n+1})
+=
+\rho L\Big(V_{i,n+1}^-(X_{n+1})-V_{i,n}^-\Big)
+-
+\Phi_i(X_{n+1}),
+$$
+
+with $\Phi_i$ the time-integrated discrete flux jump.
+
+A full Newton Jacobian would require
+$$
+\frac{\partial r_i}{\partial X_j}
+=
+\rho L\,\frac{\partial V_{i,n+1}^-}{\partial X_j}
+-
+\frac{\partial \Phi_i}{\partial X_j},
+$$
+with
+$$
+\frac{\partial \Phi_i}{\partial X_j}
+=
+\frac{\partial \Phi_i}{\partial T}\frac{\partial T}{\partial X_j}
++
+\frac{\partial \Phi_i}{\partial \mathcal M}\frac{\partial \mathcal M}{\partial X_j}.
+$$
+
+## A reduced Jacobian: differentiate geometry, not flux
+
+:::{.columns}
+::: {.column width="50%"}
+**What we keep**
+$$
+J_{ij}^{\mathrm{geo}}
+\;\approx\;
+\rho L\,\frac{\partial V_{i,n+1}^-}{\partial X_j}
+$$
+
+because it is easy (analytical) :
+
+- polytope-based differentiable geometry
+- captures the leading effect of front motion
+- cheap and robust
+:::
+::: {.column width="50%"}
+**What we neglect**
+$$
+\frac{\partial \Phi_i}{\partial X_j}
+$$
+
+because it would require differentiating:
+
+- the reconstructed geometry
+- the discrete operators / moments
+- the PDE solution itself
+- the interfacial flux evaluation
+:::
+:::
+    
+> **This is not a full Jacobian.**  
+> **It is a reduced geometric Jacobian.**
+
 
 ## Why Newton?
 
 - The difficulty is the nonlinear PDE--geometry coupling
 - Newton gives the right viewpoint: solve the coupled residual, not the subproblems separately
-- A full Jacobian is expensive because geometry reconstruction is inside the residual
-- So we use reduced nonlinear corrections with the same philosophy
+- In practice we use a **reduced Jacobian**, built from the geometric part of the Stefan residual
+- This already gives a systematic nonlinear correction mechanism
 
 $$
-\mathbf J(U^{(k)})\,\delta U^{(k)} = -\mathbf F(U^{(k)})
+\mathbf J_{\mathrm{geo}}(U^{(k)})\,\delta U^{(k)} \approx -\mathbf F(U^{(k)})
 $$
 
 > **Sharp-interface phase change is a nonlinear problem.**  
 > **So we use nonlinear thinking.**
-
+    
 ::: center
 **Newton is all you need.**
 :::
@@ -644,6 +740,11 @@ $$
 
 ::: center
 **Questions?**
+:::
+
+# References {.appendix visibility="uncounted"}
+
+::: {#refs}
 :::
 
 # Appendix {.appendix visibility="uncounted"}
