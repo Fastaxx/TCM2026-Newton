@@ -1,5 +1,5 @@
 # directory containing your fig1.tex, fig2.tex
-FIGS = fig1 fig2
+FIGS = fig3
 
 .PHONY: all clean
 all: $(FIGS:=.png)

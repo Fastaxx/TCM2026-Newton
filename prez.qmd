@@ -659,48 +659,116 @@ $$
 
 # Results
 
-## Planar Stefan front: the coupled correction works
+## Planar Stefan front — coupled correction converges cleanly
 
-- self-similar two-phase benchmark
-- interface and temperature both converge cleanly
+:::{.columns}
+::: {.column width="52%"}
+Two-phase melting problem of a planar interface.
+
+What we observe:
+
+- temperature and interface both converge cleanly
 - fewer than $10$ inner iterations are usually enough
-- residual is driven essentially to machine precision
+- the Stefan residual is driven essentially to machine precision
 
-**Observed global rates**
+> **The coupling correction is effective.**
+:::
 
-- LM correction: $\approx 2.31$ in temperature, $\approx 2.02$ in interface position
-- residual redistribution: $\approx 2.13$ in temperature, $\approx 2.08$ in interface position
+::: {.column width="48%"}
+![](figures/two_phase_planar_stefan.gif){width="100%"}
 
-<!-- Suggested figure here: planar Stefan convergence + residual decay -->
+<div style="font-size:0.56em; margin-top:0.4em;">
 
-> **Once the coupling is enforced, second-order front accuracy comes back.**
+| Method | $\varepsilon_T$ finest | $\varepsilon_s$ finest | rate $T$ | rate $s$ |
+|---|---:|---:|---:|---:|
+| LM coupled | $4.62\times10^{-7}$ | $3.37\times10^{-6}$ | $2.31$ | $2.02$ |
+| Redistribution | $2.26\times10^{-6}$ | $3.36\times10^{-6}$ | $2.13$ | $2.08$ |
 
-## Frank disk: coupled beats predictor-only
+</div>
 
-The exact interface is radially symmetric:
-$$
-r_s(t)=2\lambda\sqrt{\alpha^+ t}
-$$
+<div style="font-size:0.56em; margin-top:-0.3em;">
+Both coupled corrections recover about second-order front accuracy.
+</div>
+:::
+:::
 
-**Coupled strategies**
+## Frank sphere — predictor-only is not enough
 
-- LM: global rates $\approx 2.14$ in temperature, $\approx 1.89$ in radius
-- redistribution: global rates $\approx 2.24$ in temperature, $\approx 1.58$ in radius
+:::{.columns}
+::: {.column width="52%"}
+Predictor-only strategy:
 
-**Predictor-only baseline**
+- solve, advance geometry, repeat
 
-- temperature still converges reasonably well
-- radius error becomes non-monotone
-- no meaningful global convergence for the interface
+What happens:
 
-> **The bulk discretization is not the main issue anymore.**  
-> **The main issue is the coupling error.**
+- temperature still converges
+- the front error is non-monotone
+- no meaningful convergence for the interface
 
-<!-- Suggested figure here: Frank disk radius / field / comparison between coupled and predictor-only -->
+> **The bulk solve is not the main issue.**  
+> **The missing ingredient is the coupling correction.**
+:::
+
+::: {.column width="48%"}
+
+![](figures/fig3.png){width="100%"}
+
+
+<div style="font-size:0.56em; margin-top:0.4em;">
+
+| Method | $\varepsilon_T$ finest | $\varepsilon_r$ finest | rate $T$ | rate $r$ |
+|---|---:|---:|---:|---:|
+| Predictor-only | $2.68\times10^{-3}$ | $1.05\times10^{-2}$ | $1.3$ | $-0.08$ |
+
+</div>
+
+<div style="font-size:0.56em; margin-top:-0.3em;">
+Front accuracy stalls even though the bulk temperature error still decreases.
+</div>
+:::
+:::
+
+## Frank sphere — coupled correction restores front convergence
+
+:::{.columns}
+::: {.column width="55%"}
+Coupled strategies:
+
+- **Levenberg--Marquardt**
+- **Residual redistribution**
+
+What changes:
+
+- clean temperature convergence
+- clean front convergence
+- much smaller final radius error
+
+> **Once the coupling is enforced,**  
+> **second-order front accuracy comes back.**
+:::
+
+::: {.column width="45%"}
+![](figures/frank_sphere.gif){width="100%"}
+
+<div style="font-size:0.56em; margin-top:0.4em;">
+
+| Method | $\varepsilon_T$ finest | $\varepsilon_r$ finest | rate $T$ | rate $r$ |
+|---|---:|---:|---:|---:|
+| Predictor-only | $2.68\times10^{-3}$ | $1.05\times10^{-2}$ | $1.3$ | $-0.08$ |
+| LM coupled | $8.79\times10^{-4}$ | $2.75\times10^{-4}$ | $2.14$ | $1.89$ |
+| Redistribution | $1.13\times10^{-3}$ | $1.53\times10^{-3}$ | $2.24$ | $1.58$ |
+
+</div>
+
+<div style="font-size:0.56em; margin-top:-0.3em;">
+$\varepsilon_T$ and $\varepsilon_r$ errors are $1$ to $2$ orders of magnitude smaller than litterature.
+</div>
+:::
+:::
 
 ## Beyond the smooth benchmark
 
-- 3D Frank sphere
 - stronger front deformations
 - dendritic decay / instability-type configurations
 - extension to temperature + species + flow
