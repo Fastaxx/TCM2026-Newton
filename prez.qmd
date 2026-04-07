@@ -79,7 +79,7 @@ $$
 ::: {.column width="50%"}
 **Flow**
 $$
-\rho^\pm \partial_t \mathbf u^\pm
+\rho^\pm D_t \mathbf u^\pm
 =
 \nabla\!\cdot\!\boldsymbol\sigma^\pm + \rho^\pm \mathbf g,
 \qquad
@@ -103,7 +103,7 @@ $$
 
 ## Interface conditions and phase change [^2]
 
-On the moving interface $\Gamma(t)$:
+On the moving interface $\Gamma(t)$ with velocity $\mathbf v$:
 $$
 \dot m = \rho^- \left(\mathbf u^- - \mathbf v\right)\!\cdot\!\mathbf n
 = \rho^+ \left(\mathbf u^+ - \mathbf v\right)\!\cdot\!\mathbf n
@@ -130,7 +130,7 @@ $$
 $$
 \llbracket T \rrbracket = 0,
 \qquad
-T_\Gamma = T_m + m C^- + \epsilon_\kappa \kappa + \epsilon_v \mathbf v\cdot\mathbf n,
+T_\Gamma = T_m + m_p C^- + \epsilon_\kappa \kappa + \epsilon_v \mathbf v\cdot\mathbf n,
 \qquad
 C^+ = k_e C^-
 $$
@@ -208,7 +208,7 @@ $$
 
 :::{.columns}
 ::: {.column width="55%"}
-The cut-cell operators are built from low-order moments only:
+The cut-cell operators are built from low-order moments only :
 $$
 V_i^\pm,
 \qquad
@@ -235,15 +235,15 @@ $$
 
 ## One coupled linear system
 
-Jump conditions become additional algebraic equations for the interface unknowns.
+Jump conditions become additional algebraic equations for the interface unknowns [^3].
 
 $$
 \underbrace{
 \begin{bmatrix}
-\text{bulk }- & \text{coupling} & 0 & 0 \\
+\text{bulk }^- & \text{coupling} & 0 & 0 \\
 \text{flux jump} & \text{coupling} & \text{coupling} & 0 \\
 0 & \text{coupling} & \text{coupling} & \text{scalar jump} \\
-0 & 0 & \text{coupling} & \text{bulk }+
+0 & 0 & \text{coupling} & \text{bulk }^+
 \end{bmatrix}}_{\text{one sharp-interface system}}
 \begin{bmatrix}
 u^{\omega-} \\
@@ -265,6 +265,9 @@ $$
 - jump laws enforced on the interface unknowns themselves
 
 > **A sharp interface deserves a sharp algebraic system.**
+
+[^3]: [@libat-space-time-2026]
+
 
 ## Result: mass transfer across a static bubble (2D)
 
@@ -410,7 +413,7 @@ A local geometric conservation law is built in:
 $$
 V_{n+1,i}^\pm - V_{n,i}^\pm
 \mp
-\int_{t_n}^{t_{n+1}}\!\int_{\Gamma_i(t)} w\,dS\,dt = 0
+\int_{t_n}^{t_{n+1}}\!\int_{\Gamma_i(t)} \mathbf v \cdot \mathbf n \,dS\,dt = 0
 $$
 :::
 :::{.column width="46%"}
@@ -616,7 +619,7 @@ $$
 
 because it is easy (analytical) :
 
-- polytope-based differentiable geometry
+- polytope-based differentiable geometry [^4]
 - captures the leading effect of front motion
 - cheap and robust
 :::
@@ -635,9 +638,9 @@ because it would require differentiating:
 :::
 :::
     
-> **This is not a full Jacobian.**  
-> **It is a reduced geometric Jacobian.**
+> **This is not a full Jacobian. It is a reduced geometric Jacobian.**
 
+[^4]: [@Crane:2013:DGP]
 
 ## Why Newton?
 
@@ -658,6 +661,26 @@ $$
 :::
 
 # Results
+
+## Coupled Nonlinear corrections converge rapidly
+
+:::{.columns}
+::: {.column width="52%"}
+- **1st iteration** : classical advection algorithm
+- **Next iterations** : nonlinear correction loop
+- 4-15 iterations to converge
+- Convergence is essentially monotone and robust (Fixed Point Structure of the Nonlinear System) [^5]
+
+> **The nonlinear coupling correction is effective.**
+:::
+::: {.column width="48%"}
+
+![](figures/stefan_residual_vs_iterations.png){width="100%"}
+:::
+:::
+
+[^5]: [@Libat_2026]
+
 
 ## Planar Stefan front — coupled correction converges cleanly
 
@@ -773,26 +796,30 @@ $\varepsilon_T$ and $\varepsilon_r$ errors are $1$ to $2$ orders of magnitude sm
 - dendritic decay / instability-type configurations
 - extension to temperature + species + flow
 
-> **Once the interface is treated as an unknown, the framework becomes naturally multiphysics-ready.**
+> **Once the interface is treated as an unknown, the method becomes naturally multiphysics-ready.**
 
-<!-- Suggested figure here: 3D sphere / dendrite / thermo-solutal teaser -->
+## Beyond the smooth benchmark
 
-## Code perspective
+> **Once the interface is treated as an unknown, the method becomes naturally multiphysics-ready.**
 
-- geometry, operators, assembly, solve: clearly separated
-- same operator logic in static and moving cases
-- same sharp-interface philosophy for diffusion, transport, Stokes, Stefan
-- front tracking and other interface representations can share the same cut-cell core
+:::{.columns}
+::: {.column width="50%"}
+![Dendritic decay](figures/crystal_decay_temperature.png){width="50%"}
+:::
+::: {.column width="50%"}
+![Thermo-solutal case](figures/martin_kauffman_1d_temperature_concentration_n65.png){width="100%"}
+:::
+:::
 
-> **The code reflects the mathematics:**  
-> **geometry and PDE are solved together, not separately.**
+> **What about Navier-Stokes coupling?** (see appendix and questions)
 
-# Take-home messages
+
+# Conclusion
 
 ## What to remember
 
-1. Fixed-interface sharp discretization already beats smeared approaches
-2. For phase change, the real difficulty is the PDE--geometry coupling
+1. Fixed-interface sharp two-fluid discretization already beats classical approaches
+2. For phase change, the real difficulty is the PDE-geometry coupling
 3. The interface must be treated as an unknown
 4. Space-time cut cells give the right moving-geometry framework
 5. Nonlinear correction is the natural way to solve the full problem
@@ -817,51 +844,163 @@ $\varepsilon_T$ and $\varepsilon_r$ errors are $1$ to $2$ orders of magnitude sm
 
 # Appendix {.appendix visibility="uncounted"}
 
-## Appendix --- Geometric moments in one line
+## Appendix — Navier--Stokes solver: current status
 
-For a given interface representation $f$, the geometry module returns the low-order moments needed by the operators:
+:::{.columns}
+::: {.column width="42%"}
+
+**Sharp-interface coupling**
 
 $$
-(V,\,\mathbf x,\,\Gamma,\,\mathrm{ctype},\,\mathbf x_\Gamma)
-= \texttt{integrate(Tuple\{0\}, f, g, Float64, nan)}
+\llbracket \boldsymbol{\sigma}\cdot\mathbf n \rrbracket = \gamma \kappa \mathbf n,
 $$
 $$
-A = \texttt{integrate(Tuple\{1\}, f, g, Float64, nan)}
-$$
-$$
-W = \texttt{integrate(Tuple\{0\}, f, g, Float64, nan,  x)}
+\llbracket \mathbf u \rrbracket = \mathbf 0
 $$
 
-- $V$: wet volume
-- $A$: face apertures
-- $\Gamma$: interface measure
-- $\mathbf x$, $\mathbf x_\Gamma$: barycenters
-- $W$: staggered / shifted moments
+\medskip
 
-> **Geometry in. Operators out.**
+**Validated so far**
 
-## Appendix --- Operator construction, matrix-free point of view
+- two-phase Stokes/Navier-Stokes flow
+- Fixed interface and prescribed motion
+- Various sharp jump conditions
 
-For each active cell / face / interface patch:
+:::
+::: {.column width="58%"}
 
-```julia
-for cell in active_cells(grid, geometry)
-    V⁻, V⁺      = phase_volumes(cell)
-    A⁻, A⁺      = open_face_areas(cell)
-    Γ, xΓ       = interface_measure(cell)
+![](figures/10_bis_two_phase_planar_couette_poiseuille.png){width="100%"}
 
-    # bulk divergence contributions
-    add_bulk_fluxes!(residual⁻, cell, A⁻, uω⁻, uγ⁻)
-    add_bulk_fluxes!(residual⁺, cell, A⁺, uω⁺, uγ⁺)
 
-    # interface constraints
-    add_jump_rows!(residualγ, cell, Γ, xΓ, uγ⁻, uγ⁺)
-end
-```
+<div style="font-size:0.60em;">
 
-- local geometry drives local fluxes
-- the interface enters through the same cellwise loop
-- matrix-free and assembled views share the same geometric ingredients
+| $N$ | $\varepsilon_{u_1}$ | $\varepsilon_{u_2}$ |
+|---:|---:|---:|
+| 32  | $4.84\times10^{-3}$ | $4.54\times10^{-3}$ |
+| 64  | $1.83\times10^{-3}$ | $1.75\times10^{-3}$ |
+| 96  | $8.13\times10^{-4}$ | $7.79\times10^{-4}$ |
+| 128 | $3.63\times10^{-4}$ | $3.48\times10^{-4}$ |
+| Order | $1.99$ | $1.99$ |
+
+</div>
+
+:::
+:::
+
+> **The sharp two-phase Stokes/Navier--Stokes solver is in place.**
+
+## Appendix — Capillary equilibrium is recovered
+
+:::{.columns}
+::: {.column width="50%"}
+
+![](figures/two_phase_static_circle_laplace_sweep_n65.png){width="100%"}
+
+:::
+::: {.column width="50%"}
+
+![](figures/two_phase_static_circle_snapshot_n65.png){width="100%"}
+
+:::
+:::
+
+$$
+\llbracket \boldsymbol{\sigma}\cdot\mathbf n \rrbracket = \gamma \kappa \mathbf n
+$$
+
+- static circle
+- correct Laplace pressure jump
+- no parasitic currents at equilibrium
+
+> **When surface tension and pressure balance exactly, the velocity stays at machine precision.**
+
+## Appendix — Why Navier--Stokes + phase change is harder
+
+:::{.columns}
+::: {.column width="56%"}
+
+On the same moving interface, we must enforce
+
+$$
+\llbracket \boldsymbol{\sigma}\cdot\mathbf n \rrbracket = \gamma \kappa \mathbf n,
+\qquad
+\llbracket \mathbf u \rrbracket = \mathbf 0
+$$
+
+$$
+\dot m\,L = \llbracket k \nabla T \cdot \mathbf n \rrbracket,
+\qquad
+\dot m\,\llbracket C \rrbracket = \llbracket D \nabla C \cdot \mathbf n \rrbracket
+$$
+
+$$
+\dot m = \rho^\pm (\mathbf u^\pm-\mathbf v)\cdot\mathbf n
+$$
+
+**Why it is harder**
+
+- one interface, several jump laws
+- flow, heat, solute, and motion are coupled
+- curvature enters both stress and thermodynamics
+
+:::
+::: {.column width="44%"}
+
+$$
+\text{flow} \;\Longrightarrow\; \text{stress}
+$$
+
+$$
+\text{heat / solute} \;\Longrightarrow\; \dot m
+$$
+
+$$
+\text{stress} + \dot m \;\Longrightarrow\; \Gamma(t)
+$$
+
+$$
+\Gamma(t) \;\Longrightarrow\; \text{jumps, curvature, geometry}
+$$
+
+> **One interface. One coupled nonlinear problem.**
+
+:::
+:::
+
+> **The interface is not only transported by the flow: it is also created by phase change.**
+
+## Appendix — Interfacial thermodynamics
+
+:::{.columns}
+::: {.column width="54%"}
+
+The interface temperature is not fixed by $T_m$ alone:
+
+$$
+T_\Gamma = T_m + m_p\,C^- + \epsilon_\kappa \kappa + \epsilon_v\,(\mathbf v\!\cdot\!\mathbf n)
+$$
+
+It is shifted by:
+
+- **composition** through the **liquidus slope** $m_p$
+- **curvature** through the **Gibbs--Thomson effect**
+- **motion** through **kinetic undercooling**
+
+$$
+C^+ = k_e C^-
+$$
+
+> **Composition sets the local equilibrium, curvature and motion correct it.**
+:::
+
+::: {.column width="46%"}
+
+![](figures/eutectic.png){width=80%}
+
+![](figures/Mullins_sekerka.png){width=80%}
+
+:::
+:::
 
 ## Appendix --- Nonlinear free-boundary loop
 
