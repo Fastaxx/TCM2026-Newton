@@ -145,10 +145,9 @@ $$
 :::{.column width="50%"}
 **Classical approaches**
 
-- smear the interface
-- regularize jumps
+- use filtered models (one-fluid, ...) [^6]
 - decouple PDE and interface motion
-- use weak or explicit coupling
+- use explicit coupling
 :::
 :::{.column width="50%"}
 **What we want instead**
@@ -162,6 +161,8 @@ $$
 
 > **We do not approximate the coupling.**  
 > **We solve it.**
+
+[^6]: [@Kataoka1986LocalIF]
 
 # Part I --- Fixed interface: sharp-interface model
 
@@ -260,7 +261,7 @@ b^+
 \end{bmatrix}
 $$
 
-- no ghost-fluid smearing
+- no ghost-fluid or immersed-boundary interpolation
 - no diffuse effective coefficients
 - jump laws enforced on the interface unknowns themselves
 
@@ -312,6 +313,34 @@ Observed order: our method $\approx 2.2$ \quad vs \quad one-fluid $\approx 1.1$
 </div>
 :::
 :::
+
+
+## Moving interfaces require space-time geometry
+
+When $\Gamma(t)$ moves, cells can appear or disappear.
+
+:::{.columns}
+:::{.column width="54%"}
+**What space-time finite volumes fix**
+
+- fresh / dead cells become ordinary space-time cut cells
+- geometry and conservation are handled on the same slab
+- no ad hoc merging or repair step
+
+A local geometric conservation law is built in:
+$$
+V_{n+1,i}^\pm - V_{n,i}^\pm
+\mp
+\int_{t_n}^{t_{n+1}}\!\int_{\Gamma_i(t)} \mathbf v \cdot \mathbf n \,dS\,dt = 0
+$$
+:::
+:::{.column width="46%"}
+![Space-time cut cells](figures/space_time.png)
+:::
+:::
+
+> **Fresh cells and dead cells are not special cases.**  
+> **They are just space-time cut cells.**
 
 ## Result: prescribed moving interface with Robin transfer
 
@@ -397,32 +426,9 @@ $$
 > **The interface is not a boundary condition.**  
 > **It is an unknown.**
 
-## Moving interfaces require space-time geometry
+## Front-Tracking is the right approach for sharpness
 
-When $\Gamma(t)$ moves, cells can appear or disappear.
-
-:::{.columns}
-:::{.column width="54%"}
-**What space-time finite volumes fix**
-
-- fresh / dead cells become ordinary space-time cut cells
-- geometry and conservation are handled on the same slab
-- no ad hoc merging or repair step
-
-A local geometric conservation law is built in:
-$$
-V_{n+1,i}^\pm - V_{n,i}^\pm
-\mp
-\int_{t_n}^{t_{n+1}}\!\int_{\Gamma_i(t)} \mathbf v \cdot \mathbf n \,dS\,dt = 0
-$$
-:::
-:::{.column width="46%"}
-![Space-time cut cells](figures/space_time.png)
-:::
-:::
-
-> **Fresh cells and dead cells are not special cases.**  
-> **They are just space-time cut cells.**
+![](figures/front_tracking_mesh.png){width="100%"}
 
 ## The coupled nonlinear problem
 
@@ -523,8 +529,8 @@ $$
 ## Two correction strategies, same residual
 
 :::{.columns}
-:::{.column width="50%"}
-**Gauss--Newton correction**
+:::{.column width="50%" .fragment}
+**Least-squares correction**
 
 Solve for a front displacement $d$ by minimizing
 $$
@@ -542,7 +548,15 @@ $$
 - smooth and robust
 - closest in spirit to a reduced Newton step
 :::
-:::{.column width="50%"}
+:::{.column width="50%" .fragment}
+![](figures/fig1.png){width="80%"}
+:::
+:::
+
+## Two correction strategies, same residual
+
+:::{.columns}
+:::{.column width="50%" .fragment}
 **Residual redistribution**
 
 Convert the local Stefan residual into a front displacement 
@@ -559,21 +573,13 @@ $$
 - local correction
 - more aggressive than Gauss--Newton
 :::
+:::{.column width="50%" .fragment}
+![](figures/fig2.png){width="80%"}
+:::
 :::
 
+::: {.fragment}
 > **Same residual. Different front updates. Same coupled problem.**
-
-## Two correction strategies, same residual
-
-:::{.columns}
-::: {.column width="50%" .fragment}
-**Gauss--Newton correction**
-![](figures/fig1.png){width="100%"}
-:::
-::: {.column width="50%" .fragment}
-**Residual redistribution**
-![](figures/fig2.png){width="100%"}
-:::
 :::
 
 ## A reduced Jacobian: differentiate geometry, not flux
