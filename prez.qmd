@@ -147,7 +147,7 @@ $$
 
 - use filtered models (one-fluid, ...) [^6]
 - decouple PDE and interface motion
-- use explicit coupling
+- use explicit splitting algorithms
 :::
 :::{.column width="50%"}
 **What we want instead**
@@ -192,10 +192,10 @@ $$
 - Cartesian finite-volume discretization
 - The interface cuts cells and faces
 - Geometric moments encode the cut geometry
-- Bulk unknowns and interface unknowns are solved together
+- Bulk unknowns $(u^{\omega-}, u^{\omega+})$ and interface unknowns $(u^{\gamma-}, u^{\gamma+})$ are solved together
 
 $$
-\text{bulk equations in } \Omega^\pm
+\text{bulk equations in} \Omega^\pm
 \quad + \quad
 \text{interface constraints on } \Gamma
 \quad \Longrightarrow \quad
@@ -234,6 +234,25 @@ $$
 :::
 :::
 
+## Discretization blocks
+
+- Bulk equations discretized using geometric moments and interface unknowns
+
+$$
+\operatorname{bulk}^\pm u^{\omega\pm} + \operatorname{coupling}^\pm u^{\gamma\pm} = b^\pm
+$$
+
+- Jump conditions discretized using interface unknowns and fluxes
+
+$$
+\operatorname{flux jump} u^{\omega-} + \operatorname{coupling}^- u^{\gamma-} + \operatorname{coupling}^+ u^{\gamma+} + \operatorname{flux jump} u^{\omega+} = g_f
+$$
+$$
+\operatorname{scalar jump} u^{\gamma-} + \operatorname{coupling}^- u^{\gamma-} + \operatorname{coupling}^+ u^{\gamma+} + \operatorname{scalar jump} u^{\gamma+} = g_j
+$$
+
+*How are these blocks made?* (See appendix or questions)
+
 ## One coupled linear system
 
 Jump conditions become additional algebraic equations for the interface unknowns [^3].
@@ -242,8 +261,8 @@ $$
 \underbrace{
 \begin{bmatrix}
 \text{bulk }^- & \text{coupling} & 0 & 0 \\
-\text{flux jump} & \text{coupling} & \text{coupling} & 0 \\
-0 & \text{coupling} & \text{coupling} & \text{scalar jump} \\
+\text{flux jump} & \text{coupling} & \text{coupling} & \text{flux jump} \\
+\text{scalar jump} & \text{coupling} & \text{coupling} & \text{scalar jump} \\
 0 & 0 & \text{coupling} & \text{bulk }^+
 \end{bmatrix}}_{\text{one sharp-interface system}}
 \begin{bmatrix}
@@ -263,7 +282,7 @@ $$
 
 - no ghost-fluid or immersed-boundary interpolation
 - no diffuse effective coefficients
-- jump laws enforced on the interface unknowns themselves
+- jump laws discretized and solved with interface unknowns
 
 > **A sharp interface deserves a sharp algebraic system.**
 
@@ -324,7 +343,7 @@ When $\Gamma(t)$ moves, cells can appear or disappear.
 **What space-time finite volumes fix**
 
 - fresh / dead cells become ordinary space-time cut cells
-- geometry and conservation are handled on the same slab
+- Natural extension of finite volumes, time as additional dimension
 - no ad hoc merging or repair step
 
 A local geometric conservation law is built in:
@@ -393,13 +412,13 @@ Observed order: all $=1.79$ \quad full $=1.72$ \quad cut $=2.1$
 - The same framework already works for prescribed moving interfaces in space-time
 
 
-> **The static and prescribed-motion story is already strong.**  
-> **Now the real difficulty starts: free boundaries.**
+> **The static and prescribed-motion algorithm is already strong.**  
+> **Now the real difficulty continues: free boundaries.**
 
 
 # Part II --- Phase change and nonlinear coupling
 
-## Phase change turns the interface into an unknown
+## Phase change turns the interface motion into an unknown
 
 For a Stefan-type problem,
 $$
@@ -423,7 +442,7 @@ $$
 - move interface $\Rightarrow$ change geometry
 - change geometry $\Rightarrow$ new PDE
 
-> **The interface is not a boundary condition.**  
+> **The interface motion is no more prescribed.**  
 > **It is an unknown.**
 
 ## Front-Tracking is the right approach for sharpness
@@ -451,7 +470,7 @@ $$
 \mathbf F_H^{-}(\mathbf T_{n+1}^{-},X_{n+1})=\mathbf 0,
 $$
 $$
-\mathbf F_S(\mathbf T_{n+1}^{+},\mathbf T_{n+1}^{-},X_{n+1})=\mathbf 0
+\mathbf R_S(\mathbf T_{n+1}^{+},\mathbf T_{n+1}^{-},X_{n+1})=\mathbf 0
 $$
 
 With
@@ -463,7 +482,12 @@ U=
 X_{n+1}
 \end{bmatrix},
 \qquad
-\mathbf F(U)=\mathbf 0
+\mathbf F(U) = \begin{bmatrix}
+\mathbf F_H^{+} \\
+\mathbf F_H^{-} \\
+\mathbf R_S
+\end{bmatrix}
+= \mathbf 0
 $$
 
 > **The unknown is not only the field.**  
@@ -493,7 +517,7 @@ $$
 **What goes wrong**
 
 $$
-R_{i,j}(X_{n+1}^{\mathrm{split}},
+\mathbf R(X_{n+1}^{\mathrm{split}},
 \widetilde T_{n+1}^{+},
 \widetilde T_{n+1}^{-}) \neq 0
 $$
@@ -510,6 +534,8 @@ $$
 
 ## Nonlinear correction loop: the basic idea
 
+:::{.columns}
+:::{.column width="50%"}
 At iteration $k$:
 
 1. assume a candidate interface $\Gamma^{(k)}$
@@ -518,13 +544,38 @@ At iteration $k$:
 4. evaluate the discrete Stefan residual
 5. correct the interface
 6. repeat until the residual is small
+:::
+:::{.column width="50%"}
+:::{.callout-important .fragment}
+Cost : Require solving the PDE $k$ times. Questions: Is the method fast enough? What about stopping criteria?
+:::
+:::
+:::
 
+$$
+\mathbf F(U^{(k)}) \approx \mathbf 0
+$$
 $$
 \Gamma^{(k+1)} = \Gamma^{(k)} + \delta \Gamma^{(k)}
 $$
 
 > **This is not “move first, solve later”.**  
 > **This is a nonlinear correction loop.**
+
+
+## What is the correction $\delta \Gamma^{(k)}$ ?
+The correction $\delta \Gamma^{(k)}$ is the solution of a nonlinear problem itself. We can choose how to express it, and how to solve for it.
+
+$$
+\delta \Gamma^{(k)} = F(d^{(k)}, \mathbf R^{(k)})
+$$
+
+Function of the current residual $\mathbf R^{(k)}$ and of a front displacement $d^{(k)}$.
+
+Two strategies:
+
+- Solving the problem in a least-squares sense 
+- Redistributing the residual directly as a front displacement
 
 ## Two correction strategies, same residual
 
@@ -534,18 +585,18 @@ $$
 
 Solve for a front displacement $d$ by minimizing
 $$
-J(d) =
-\frac12\|r(d)\|_W^2
+\mathcal{L}(d) =
+\frac12\|\mathbf R(d)\|_W^2
 +
 \frac{\eta}{2}\|L_\Gamma d\|^2
 $$
 
 $$
-d^* = \arg\min_d J(d)
+d^* = \arg\min_d \mathcal{L}(d)
 $$
 
 - global correction
-- smooth and robust
+- laplace beltrami tends to smooth the front and avoid oscillations
 - closest in spirit to a reduced Newton step
 :::
 :::{.column width="50%" .fragment}
@@ -562,13 +613,8 @@ $$
 Convert the local Stefan residual into a front displacement 
 
 $$
-\delta d^{(k)} = -\lambda^{(k)}\;S_\Gamma\;A_{v\leftarrow\sigma}^{(k)}\;C_{\sigma\leftarrow c}^{(k)}\;D_c^{(k)\,-1}\;r^{(k)}.
+d^{(k)} = -S_\Gamma\;A_{v\leftarrow\sigma}^{(k)}\;C_{\sigma\leftarrow c}^{(k)}\;D_c^{(k)\,-1}\;\mathbf R^{(k)}.
 $$
-
-$$
-\Gamma^{(k+1)} = \Gamma^{(k)} + \delta d^{(k)}
-$$
-
 
 - local correction
 - more aggressive than Gauss--Newton
@@ -586,7 +632,7 @@ $$
 
 For the Stefan residual in each cut cell,
 $$
-r_i(X_{n+1})
+\mathbf R_i(X_{n+1})
 =
 \rho L\Big(V_{i,n+1}^-(X_{n+1})-V_{i,n}^-\Big)
 -
@@ -597,7 +643,7 @@ with $\Phi_i$ the time-integrated discrete flux jump.
 
 A full Newton Jacobian would require
 $$
-\frac{\partial r_i}{\partial X_j}
+\frac{\partial \mathbf R_i}{\partial X_j}
 =
 \rho L\,\frac{\partial V_{i,n+1}^-}{\partial X_j}
 -
@@ -611,6 +657,13 @@ $$
 +
 \frac{\partial \Phi_i}{\partial \mathcal M}\frac{\partial \mathcal M}{\partial X_j}.
 $$
+
+:::{.callout-note .fragment}
+This residual-method is not thermal-only. The same logic applies to species and flow, with the appropriate residuals and fluxes. Always :
+$$
+\mathbf{R} = \text{geometry} - \text{flux}
+$$
+:::
 
 ## A reduced Jacobian: differentiate geometry, not flux
 
@@ -691,7 +744,7 @@ $$
 ## Planar Stefan front — coupled correction converges cleanly
 
 :::{.columns}
-::: {.column width="52%"}
+::: {.column width="50%"}
 Two-phase melting problem of a planar interface.
 
 What we observe:
@@ -703,7 +756,7 @@ What we observe:
 > **The coupling correction is effective.**
 :::
 
-::: {.column width="48%"}
+::: {.column width="50%"}
 ![](figures/two_phase_planar_stefan.gif){width="100%"}
 
 <div style="font-size:0.56em; margin-top:0.4em;">
@@ -724,7 +777,7 @@ Both coupled corrections recover about second-order front accuracy.
 ## Frank sphere — predictor-only is not enough
 
 :::{.columns}
-::: {.column width="52%"}
+::: {.column width="50%"}
 Predictor-only strategy:
 
 - solve, advance geometry, repeat
@@ -739,7 +792,7 @@ What happens:
 > **The missing ingredient is the coupling correction.**
 :::
 
-::: {.column width="48%"}
+::: {.column width="50%"}
 
 ![](figures/fig3.png){width="100%"}
 
@@ -1023,3 +1076,24 @@ accept!(Γk)
 ```
 
 > **Same geometry for the PDE solve and for the Stefan residual.**
+
+## Appendix --- Block assembly: how to get the operators?
+
+- `grad`, `div`, `lap`, `adv`, etc. are built from the geometric moments and mimic the continuous operators.
+
+Cell-centred divergence of a flux $\mathbf q$:
+$$
+\int_\Omega \nabla\!\cdot\!\mathbf q\,dV = \int_{\partial\Omega / \Gamma} \mathbf q\!\cdot\!\mathbf n\,dS + \int_\Gamma \mathbf q\!\cdot\!\mathbf n\,dS
+$$
+
+$$
+\operatorname{div}(\mathbf q^\omega, \mathbf q^\gamma) = \frac{1}{V}\left(\sum_f A_f^\omega \mathbf q_f^\omega + \Gamma \mathbf q^\gamma\right)
+$$
+
+Face-centred gradient of a scalar $u$:
+$$
+\int_\Omega \nabla u \cdot \mathbf n\,dV = \int_{\partial\Omega / \Gamma} u \mathbf n\,dS + \int_\Gamma u \mathbf n\,dS
+$$
+$$
+\operatorname{grad}(u^\omega, u^\gamma) = \frac{1}{W}\left(\sum_f B_f^\omega u_f^\omega \mathbf n_f + \Gamma u^\gamma \mathbf n_\Gamma\right)
+$$
